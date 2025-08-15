@@ -1,0 +1,20 @@
+# Create .gitignore file
+echo "# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Data files
+data/*.csv
+data/*.json
+
+# Results
+results/
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db" > .gitignore

@@ -1,0 +1,17 @@
+# Core dependencies for the crypto backtesting environment
+# Keep this minimal - only essential packages
+
+# Data manipulation and analysis
+pandas>=1.5.0
+numpy>=1.21.0
+
+# Plotting and visualization
+matplotlib>=3.5.0
+
+# Optional technical analysis library (uncomment if needed)
+# TA-Lib>=0.4.25
+# ta>=0.10.2
+
+# Development and testing (optional)
+# pytest>=7.0.0
+# jupyter>=1.0.0
