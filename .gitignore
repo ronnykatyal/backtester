@@ -1,20 +1,42 @@
-# Create .gitignore file
-echo "# Python cache
+# Create/update .gitignore
+cat > .gitignore << 'EOF'
+# Python cache
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
+.Python
 
-# Data files
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Data files (don't commit large CSV files)
 data/*.csv
 data/*.json
+!data/sample_data.csv
 
-# Results
+# Results and outputs
 results/
+*.png
+*.jpg
 
 # IDE files
-.vscode/
+.vscode/settings.json
 .idea/
+*.swp
+*.swo
 
 # OS files
 .DS_Store
-Thumbs.db" > .gitignore
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# Temporary files
+temp/
+tmp/
+EOF

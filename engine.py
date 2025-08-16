@@ -64,6 +64,33 @@ class BacktestEngine:
         
         return execution_price, fee
     
+    def calculate_max_position_size(self, available_balance: float, price: float, position_fraction: float = 1.0) -> float:
+        """
+        Calculate maximum position size accounting for slippage and fees.
+        
+        Args:
+            available_balance: Available cash balance
+            price: Current market price
+            position_fraction: Fraction of balance to use (0.0 to 1.0)
+            
+        Returns:
+            Maximum quantity that can be purchased
+        """
+        target_investment = available_balance * position_fraction
+        
+        # Account for slippage and fees in the calculation
+        # Total cost = quantity * price * (1 + slippage) * (1 + fee_rate)
+        slippage_factor = 1 + self.slippage
+        total_cost_factor = slippage_factor * (1 + self.fee_rate)
+        
+        # Add small buffer for floating point precision (0.1%)
+        safety_buffer = 1.001
+        
+        # Calculate max quantity with safety buffer
+        max_quantity = target_investment / (price * total_cost_factor * safety_buffer)
+        
+        return max_quantity
+    
     def execute_trade(self, signal: int, price: float, timestamp: pd.Timestamp, strategy) -> bool:
         """
         Execute a trade based on the signal.
@@ -83,19 +110,15 @@ class BacktestEngine:
         trade_executed = False
         
         if signal == 1 and self.position == 0:  # Buy signal and no position
-            # Calculate position size
-            quantity = strategy.get_position_size(self.balance, price)
-            
-            logger.debug(f"Buy signal at price ${price:.2f}, balance=${self.balance:.2f}")
-            logger.debug(f"Calculated quantity: {quantity:.6f}")
+            # Calculate position size accounting for trading costs
+            position_fraction = strategy.params.get('position_size', 1.0)
+            quantity = self.calculate_max_position_size(self.balance, price, position_fraction)
             
             if quantity > 0:
                 execution_price, fee = self.calculate_trade_cost(quantity, price, is_buy=True)
                 total_cost = quantity * execution_price + fee
                 
-                # Debug logging
-                logger.info(f"Buy attempt: balance=${self.balance:.2f}, price=${price:.2f}, quantity={quantity:.6f}, cost=${total_cost:.2f}")
-                
+                # Double-check we have enough balance (should always pass now)
                 if total_cost <= self.balance:
                     # Execute buy
                     self.balance -= total_cost
@@ -115,9 +138,9 @@ class BacktestEngine:
                     self.trades.append(trade)
                     trade_executed = True
                     
-                    logger.info(f"BUY EXECUTED: {quantity:.6f} @ ${execution_price:.2f}, fee: ${fee:.2f}")
+                    logger.info(f"BUY EXECUTED: {quantity:.6f} @ ${execution_price:.2f}, fee: ${fee:.2f}, cost: ${total_cost:.2f}")
                 else:
-                    logger.info(f"Buy rejected: insufficient balance (need ${total_cost:.2f}, have ${self.balance:.2f})")
+                    logger.warning(f"Buy calculation error: cost ${total_cost:.2f} > balance ${self.balance:.2f}")
             else:
                 logger.info(f"Buy rejected: invalid quantity {quantity}")
         
@@ -197,15 +220,8 @@ class BacktestEngine:
             current_price = row['close']
             signal = row['signal']
             
-            # Debug: Print every signal we encounter
-            if signal != 0:
-                print(f"DEBUG: Signal {signal} at {timestamp}, price=${current_price:.2f}, balance=${self.balance:.2f}, position={self.position:.6f}")
-            
             # Execute trade if signal present
             trade_executed = self.execute_trade(signal, current_price, timestamp, strategy)
-            
-            if signal != 0:
-                print(f"DEBUG: Trade executed: {trade_executed}")
             
             # Update portfolio value and record
             total_value = self.update_portfolio_value(current_price)
