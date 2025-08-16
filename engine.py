@@ -86,9 +86,15 @@ class BacktestEngine:
             # Calculate position size
             quantity = strategy.get_position_size(self.balance, price)
             
+            logger.debug(f"Buy signal at price ${price:.2f}, balance=${self.balance:.2f}")
+            logger.debug(f"Calculated quantity: {quantity:.6f}")
+            
             if quantity > 0:
                 execution_price, fee = self.calculate_trade_cost(quantity, price, is_buy=True)
                 total_cost = quantity * execution_price + fee
+                
+                # Debug logging
+                logger.info(f"Buy attempt: balance=${self.balance:.2f}, price=${price:.2f}, quantity={quantity:.6f}, cost=${total_cost:.2f}")
                 
                 if total_cost <= self.balance:
                     # Execute buy
@@ -109,7 +115,11 @@ class BacktestEngine:
                     self.trades.append(trade)
                     trade_executed = True
                     
-                    logger.debug(f"BUY: {quantity:.6f} @ ${execution_price:.2f}, fee: ${fee:.2f}")
+                    logger.info(f"BUY EXECUTED: {quantity:.6f} @ ${execution_price:.2f}, fee: ${fee:.2f}")
+                else:
+                    logger.info(f"Buy rejected: insufficient balance (need ${total_cost:.2f}, have ${self.balance:.2f})")
+            else:
+                logger.info(f"Buy rejected: invalid quantity {quantity}")
         
         elif signal == -1 and self.position > 0:  # Sell signal and have position
             execution_price, fee = self.calculate_trade_cost(self.position, price, is_buy=False)
@@ -134,7 +144,14 @@ class BacktestEngine:
             self.trades.append(trade)
             trade_executed = True
             
-            logger.debug(f"SELL: {sold_quantity:.6f} @ ${execution_price:.2f}, fee: ${fee:.2f}")
+            logger.info(f"SELL EXECUTED: {sold_quantity:.6f} @ ${execution_price:.2f}, fee: ${fee:.2f}")
+        
+        else:
+            # Log why trade was rejected
+            if signal == 1 and self.position > 0:
+                logger.debug(f"Buy signal ignored: already have position ({self.position:.6f})")
+            elif signal == -1 and self.position == 0:
+                logger.debug(f"Sell signal ignored: no position to sell")
         
         return trade_executed
     
@@ -180,8 +197,15 @@ class BacktestEngine:
             current_price = row['close']
             signal = row['signal']
             
+            # Debug: Print every signal we encounter
+            if signal != 0:
+                print(f"DEBUG: Signal {signal} at {timestamp}, price=${current_price:.2f}, balance=${self.balance:.2f}, position={self.position:.6f}")
+            
             # Execute trade if signal present
-            self.execute_trade(signal, current_price, timestamp, strategy)
+            trade_executed = self.execute_trade(signal, current_price, timestamp, strategy)
+            
+            if signal != 0:
+                print(f"DEBUG: Trade executed: {trade_executed}")
             
             # Update portfolio value and record
             total_value = self.update_portfolio_value(current_price)

@@ -282,9 +282,14 @@ class PerformanceMetrics:
         # Trade Statistics
         print(f"\n💹 TRADE STATISTICS")
         print(f"Total Trades:         {metrics['num_trades']:>12}")
-        print(f"Completed Rounds:     {metrics['completed_trades']:>12}")
-        print(f"Win Rate:             {metrics['win_rate_pct']:>12.2f}%")
-        print(f"Profit Factor:        {metrics['profit_factor']:>12.2f}")
-        print(f"Avg Trade P&L:        ${metrics['avg_trade_return']:>11.2f}")
+        if metrics.get('completed_trades', 0) > 0:
+            print(f"Completed Rounds:     {metrics['completed_trades']:>12}")
+            print(f"Win Rate:             {metrics['win_rate_pct']:>12.2f}%")
+            print(f"Profit Factor:        {metrics['profit_factor']:>12.2f}")
+            print(f"Avg Trade P&L:        ${metrics['avg_trade_return']:>11.2f}")
+        else:
+            print(f"Completed Rounds:     {0:>12}")
+            print(f"Win Rate:             {0:>12.2f}%")
+            print(f"Note: No completed trades to analyze")
         
         print("="*60)
